@@ -38,7 +38,7 @@ const {getBoards ,matchUnique  ,getTasks, findBoard,checkArchived,cleanBoard,get
 // get all records from DB
 app.get("/api/v1/boards/",(req,res)=>{
     if(boards.length){
-        const result = getBoards(boards);
+        const result = getBoards(boards, tasks);
         res.status(200).json(result);
     }else{
         res.status(404).json({message:"Record Not Found"});
@@ -54,7 +54,7 @@ app.get("/api/v1/boards/:id",(req,res)=>{
         })
     }else{
         if(boards.length){
-            const result = findBoard(id,boards);
+            const result = findBoard(id,boards, tasks);
             if(result){
                 res.status(200).json({message : " Record Found " , data :result});
             }else{
@@ -76,9 +76,10 @@ app.post("/api/v1/boards/",(req,res)=>{
             if(description){
                 newDescription = description;
             }
-            var array = new Array();
+			var newId = boards.length + 1
+            var array = new Array()
             let board = {
-                id : boards.length + 1,
+                id : newId,
                 name : name ,
                 description : newDescription ,
                 tasks : array
@@ -129,50 +130,33 @@ app.delete("/api/v1/boards/",(req,res)=>{
     res.status(200).json({data:delRecord,message:"Record has been deleted successfully"});
 });
 
-app.put("/api/v1/boards/:id",(req,res)=>{
-    const {name,description} = req.body;
-    let object = boards.find(br=>br.id === req.params.id);
-    if(object){
-        const objIndex = boards.indexOf(object);
-        if(name){
-            boards[objIndex].name = name;
-        }
-        if(description){
-            boards[objIndex].description = description;
-        }
-        object = boards[objIndex];
-        res.status(200).json({message:"Record has been updated Successfully",data:object});
-    } else {
-        res.status(400).json({message:"Unable to update the board"});
-    }
-   
-});
-
 //read all tasks for the specific records
-app.get("/api/v1/boards/:id/tasks/",(req,res)=>{
+app.get("/api/v1/boards/:id/tasks",(req,res)=>{
+console.log("Id", req.params.id);
+if(req.params.id < 0){
+	res.status(400).json({message: "Invalid Request"});
+}
+if(!boards.length){
+	res.status(400).json({message:"No Record Available "});
+}else{
+	let obj = findBoard(req.params.id, boards);
+	
+if(obj){
+	if(obj.tasks.length){
+		const result = getTasks(req.params.id,tasks);
+		if (req.query.sort == "taskName" || req.query.sort == "id" || req.query.sort == "dateCreated"){
+			result.sort((a,b) => (a[req.query.sort] > b[req.query.sort]) ? 1 : ((b[req.query.sort] > a[req.query.sort]) ? -1 : 0))
+		}
+		res.status(200).json({message : "Tasks Found", data:result});
+	}else{
+		res.status(404).json({message:"No Tasks Found for specific id"});
+	}
+	
+}else{
+	res.status(404).json({message : "No Record Found"})
+}
 
-    console.log("Id", req.params.id);
-    if(req.params.id < 0){
-        res.status(400).json({message: "Invalid Request"});
-    }
-    if(!boards.length){
-        res.status(400).json({message:"No Record Available "});
-    }else{
-        let obj = findBoard(req.params.id, boards);
-        
-    if(obj){
-        if(obj.tasks.length){
-            const result = getTasks(req.params.id,tasks);
-            res.status(200).json({message : "Tasks Found", data:result});
-        }else{
-            res.status(404).json({message:"No Tasks Found for specific id"});
-        }
-        
-    }else{
-        res.status(404).json({message : "No Record Found"})
-    }
-    
-    } 
+} 
 });
 
 //read a specific task for the specific board
@@ -207,10 +191,33 @@ app.get("/api/v1/boards/:boardId/tasks/:taskId",(req,res)=>{
 
 });
 
+app.put("/api/v1/boards/:id",(req,res)=>{
+    const {name,boardId,description} = req.body;
+    let object = boards.find(br=>br.id === req.params.id);
+    if(object){
+        const objIndex = boards.indexOf(object);
+        if(name){
+            boards[objIndex].name = name;
+        }
+		if(boardId){
+			boards[objIndex].boardId = boardId;
+		}
+        if(description){
+            boards[objIndex].description = description;
+        }
+        object = boards[objIndex];
+        res.status(200).json({message:"Record has been updated Successfully",data:object});
+    } else {
+        res.status(400).json({message:"Unable to update the board"});
+    }
+   
+});
+
+
 //create a new task 
 
-app.post("/api/v1/boards/:id",(req,res)=>{
-    if(req.params.id < 0 ){
+app.post("/api/v1/boards/:id/tasks",(req,res)=>{
+	if(req.params.id < 0 ){
         res.status(400).json({message : "Invalid Input Parameter"});
     }
     if(!req.body.taskName){
@@ -225,16 +232,16 @@ app.post("/api/v1/boards/:id",(req,res)=>{
         if(obj){
             const boardIndex = boards.indexOf(obj);
             const {taskName} = req.body;
-            const id = tasks.length + 1;
+            const id = (tasks.length + 1).toString();
             const dateCreated = Date.now()
             const boardId = req.params.id;
 
             boards[boardIndex].tasks.push(id);
             let task ={
                 id :id,
+                boardId:boardId,
                 taskName:taskName,
                 dateCreated:dateCreated,
-                boardId:boardId,
                 archived:false
             };
             tasks.push(task);
@@ -242,7 +249,7 @@ app.post("/api/v1/boards/:id",(req,res)=>{
             res.status(201).json({message : "New Task has been added successfully",
             data:{
                 board : boards[boardIndex],
-                task : task
+                task : tasks
             }});
         }else{
             res.status(404).json({message:"No Board Found for specific id"});

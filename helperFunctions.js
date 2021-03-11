@@ -2,13 +2,14 @@
 
 
 // this helper function will filter out the boards from the data sent to it 
-const getBoards = (boards) =>{
-    let responseBoard = [] ;
+const getBoards = (boards,  tasks) =>{
+    let responseBoard = [];
     boards.map((board,index)=>{
         responseBoard.push({
             id           :    board.id,
             name  :    board.name,
-            description  :    board.description
+            description  :    board.description,
+            tasks   	:   getTasks(board.id, tasks)
         })
     });
 
@@ -32,10 +33,11 @@ const matchUnique = (name,boards)=>{
 
 // this function will find record 
 
-const findBoard = (id,boards)=>{
+const findBoard = (id,boards, tasks)=>{
     let found = null;
     boards.map((board)=>{
         if(board.id == id){
+            board.tasks = getTasks(board.id, tasks)
             found = board;
         }
     });
