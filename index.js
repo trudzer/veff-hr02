@@ -139,7 +139,7 @@ if(req.params.id < 0){
 if(!boards.length){
 	res.status(400).json({message:"No Record Available "});
 }else{
-	let obj = findBoard(req.params.id, boards);
+	let obj = findBoard(req.params.id, boards, tasks);
 	
 if(obj){
 	if(obj.tasks.length){
@@ -168,7 +168,7 @@ app.get("/api/v1/boards/:boardId/tasks/:taskId",(req,res)=>{
     if(!boards.length){
         res.status(401).json({message:"No Record Available "});
     }else{
-        let obj = findBoard(req.params.boardId, boards);
+        let obj = findBoard(req.params.boardId, boards, tasks);
         
         if(obj){
             if(obj.tasks.length){
